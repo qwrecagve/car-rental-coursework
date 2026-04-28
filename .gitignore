@@ -1,15 +1,14 @@
 # Python
 __pycache__/
 *.py[cod]
-*.pyo
 *.egg-info/
 dist/
 build/
+*.egg
+
+# Virtual environment
 venv/
 .venv/
-
-# Environment
-.env
 
 # IDE
 .vscode/
@@ -18,6 +17,3 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
-
-# Temp files
-*.log
