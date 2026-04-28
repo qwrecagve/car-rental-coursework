@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avtomobil Ijarasi</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="glass-container">
+        <header>
+            <h1>🚗 Avtomobil Ijarasi</h1>
+            <p>Zamonaviy va qulay xizmat</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('cars')">Bo'sh Avtomobillar</button>
+            <button class="tab-btn" onclick="showTab('customers')">Mijozlar</button>
+            <button class="tab-btn" onclick="showTab('rent')">Ijaraga Olish</button>
+            <button class="tab-btn" onclick="showTab('return')">Qaytarish</button>
+        </div>
+
+        <div class="tab-content active" id="cars">
+            <h2>Hozirda bo'sh avtomobillar</h2>
+            <div id="cars-list" class="grid-list">Yuklanmoqda...</div>
+        </div>
+
+        <div class="tab-content" id="customers">
+            <h2>Mijozlarimiz</h2>
+            <div id="customers-list" class="grid-list">Yuklanmoqda...</div>
+        </div>
+
+        <div class="tab-content" id="rent">
+            <h2>Mashinani ijaraga olish</h2>
+            <form id="rent-form">
+                <input type="number" id="rent-customer-id" placeholder="Mijoz ID si (masalan 1, 2, 3)" required>
+                <input type="text" id="rent-car-id" placeholder="Avtomobil Raqami (ID)" required>
+                <input type="number" id="rent-days" placeholder="Ijara kunlari (masalan 5)" required min="1">
+                <button type="submit" class="action-btn">Ijaraga Olish</button>
+            </form>
+            <p id="rent-message" class="message"></p>
+        </div>
+
+        <div class="tab-content" id="return">
+            <h2>Mashinani qaytarish</h2>
+            <form id="return-form">
+                <input type="number" id="return-customer-id" placeholder="Mijoz ID si" required>
+                <input type="text" id="return-car-id" placeholder="Avtomobil Raqami (ID)" required>
+                <button type="submit" class="action-btn">Qaytarish</button>
+            </form>
+            <p id="return-message" class="message"></p>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
