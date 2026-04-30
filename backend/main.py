@@ -1,15 +1,22 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+import shutil
+from pathlib import Path
 
-from .models import RentRequest, ReturnRequest
+from .models import RentRequest, ReturnRequest, CarCreate, CustomerCreate
 from .system import (
     get_all_cars, 
     get_available_cars, 
-    get_all_customers, 
+    get_rented_cars,
+    get_active_customers,
+    get_all_registered_customers,
     rent_car, 
-    return_car
+    return_car,
+    add_car,
+    delete_car,
+    add_customer
 )
 
 # .env faylini dasturga yuklash (o'qish)
@@ -39,9 +46,51 @@ def get_cars():
 def get_av_cars():
     return get_available_cars()
 
+@app.get("/api/cars/rented")
+def get_rent_cars():
+    return get_rented_cars()
+
 @app.get("/api/customers")
 def get_customers():
-    return get_all_customers()
+    return get_active_customers()
+
+@app.get("/api/customers/all")
+def get_all_cust():
+    return get_all_registered_customers()
+
+@app.post("/api/cars")
+def create_car(car: CarCreate):
+    success = add_car(car)
+    if success:
+        return {"message": "Mashina muvaffaqiyatli qo'shildi"}
+    return {"error": "Xatolik! Raqam band bo'lishi mumkin."}
+
+@app.delete("/api/cars/{car_id}")
+def remove_car(car_id: str):
+    success = delete_car(car_id)
+    if success:
+        return {"message": "Mashina o'chirildi"}
+    return {"error": "Mashinani o'chirishda xatolik"}
+
+@app.post("/api/upload")
+async def upload_image(file: UploadFile = File(...)):
+    try:
+        # Rasmni frontend/images papkasiga saqlash
+        images_dir = Path("frontend/images")
+        images_dir.mkdir(parents=True, exist_ok=True)
+        
+        file_path = images_dir / file.filename
+        with file_path.open("wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        return {"filename": f"images/{file.filename}"}
+    except Exception as e:
+        return {"error": f"Rasm yuklashda xatolik: {str(e)}"}
+
+@app.post("/api/customers")
+def create_customer(customer: CustomerCreate):
+    new_id = add_customer(customer)
+    return {"customer_id": new_id, "message": "Mijoz ro'yxatdan o'tdi"}
 
 @app.post("/api/rent")
 def rent(request: RentRequest):

@@ -1,68 +1,168 @@
-from typing import List, Dict, Any
-from .models import Car, Customer
+import sqlite3
+import os
+from typing import List, Optional
+from .models import Car, Customer, CarCreate, CustomerCreate
 
-# Oddiy ro'yxat ko'rinishidagi ma'lumotlar bazasi (Test uchun)
-cars_db: List[Car] = [
-    Car(car_id="01A111AA", make="Chevrolet", model="Malibu", year=2022, price_per_day=500000, 
-        image_url="images/malibu.png"),
-    Car(car_id="01B222BB", make="Chevrolet", model="Cobalt", year=2021, price_per_day=250000, 
-        image_url="images/cobalt.png"),
-    Car(car_id="01C333CC", make="Kia", model="K5", year=2023, price_per_day=700000, 
-        image_url="images/k5.png"),
-    Car(car_id="10D444DD", make="BYD", model="Chazor", year=2024, price_per_day=400000, 
-        image_url="images/chazor.png"),
-    Car(car_id="01E555EE", make="Chevrolet", model="Gentra", year=2024, price_per_day=300000, 
-        image_url="images/gentra.png")
-]
+DB_PATH = os.path.join(os.path.dirname(__file__), "cars.db")
 
-customers_db: List[Customer] = [
-    Customer(customer_id=1, name="Ali Valiyev"),
-    Customer(customer_id=2, name="Sardor Karimov"),
-    Customer(customer_id=3, name="Gulnoza Alimova")
-]
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-def get_all_cars():
-    return cars_db
+def init_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Mashinalar jadvali
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS cars (
+            car_id TEXT PRIMARY KEY,
+            make TEXT,
+            model TEXT,
+            year INTEGER,
+            price_per_day REAL,
+            image_url TEXT,
+            is_rented INTEGER DEFAULT 0
+        )
+    ''')
+    
+    # Mijozlar jadvali
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS customers (
+            customer_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            phone TEXT,
+            rented_car_id TEXT,
+            FOREIGN KEY (rented_car_id) REFERENCES cars (car_id)
+        )
+    ''')
+    
+    # Agar baza bo'sh bo'lsa, boshlang'ich mashinalarni qo'shish
+    cursor.execute("SELECT COUNT(*) FROM cars")
+    if cursor.fetchone()[0] == 0:
+        initial_cars = [
+            ("01A111AA", "Chevrolet", "Malibu", 2022, 500000, "images/malibu.png"),
+            ("01B222BB", "Chevrolet", "Cobalt", 2021, 250000, "images/cobalt.png"),
+            ("01C333CC", "Kia", "K5", 2023, 700000, "images/k5.png"),
+            ("10D444DD", "BYD", "Chazor", 2024, 400000, "images/chazor.png"),
+            ("01E555EE", "Chevrolet", "Gentra", 2024, 300000, "images/gentra.png")
+        ]
+        cursor.executemany("INSERT INTO cars (car_id, make, model, year, price_per_day, image_url) VALUES (?, ?, ?, ?, ?, ?)", initial_cars)
+    
+    conn.commit()
+    conn.close()
 
-def get_available_cars():
-    return [c for c in cars_db if not c.is_rented]
+# Bazani ishga tushirish
+init_db()
 
-def get_all_customers():
-    return customers_db
+def get_all_cars() -> List[Car]:
+    conn = get_db_connection()
+    rows = conn.execute("SELECT * FROM cars").fetchall()
+    conn.close()
+    return [Car(**dict(row)) for row in rows]
 
-def rent_car(customer_id: int, car_id: str, days: int) -> Dict[str, Any]:
-    car = next((c for c in cars_db if c.car_id == car_id), None)
-    customer = next((c for c in customers_db if c.customer_id == customer_id), None)
+def get_available_cars() -> List[Car]:
+    conn = get_db_connection()
+    rows = conn.execute("SELECT * FROM cars WHERE is_rented = 0").fetchall()
+    conn.close()
+    return [Car(**dict(row)) for row in rows]
 
+def get_rented_cars() -> List[Car]:
+    conn = get_db_connection()
+    rows = conn.execute("SELECT * FROM cars WHERE is_rented = 1").fetchall()
+    conn.close()
+    return [Car(**dict(row)) for row in rows]
+
+def get_active_customers() -> List[Customer]:
+    conn = get_db_connection()
+    # Faqat mashina olgan mijozlarni ko'rsatish
+    rows = conn.execute("SELECT * FROM customers WHERE rented_car_id IS NOT NULL").fetchall()
+    conn.close()
+    return [Customer(**dict(row)) for row in rows]
+
+def get_all_registered_customers() -> List[Customer]:
+    conn = get_db_connection()
+    rows = conn.execute("SELECT * FROM customers").fetchall()
+    conn.close()
+    return [Customer(**dict(row)) for row in rows]
+
+def add_car(car: CarCreate):
+    conn = get_db_connection()
+    try:
+        conn.execute("INSERT INTO cars (car_id, make, model, year, price_per_day, image_url) VALUES (?, ?, ?, ?, ?, ?)",
+                     (car.car_id, car.make, car.model, car.year, car.price_per_day, car.image_url))
+        conn.commit()
+        return True
+    except:
+        return False
+    finally:
+        conn.close()
+
+def delete_car(car_id: str):
+    conn = get_db_connection()
+    try:
+        conn.execute("DELETE FROM cars WHERE car_id = ?", (car_id,))
+        conn.commit()
+        return True
+    except:
+        return False
+    finally:
+        conn.close()
+
+def add_customer(customer: CustomerCreate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO customers (name, phone) VALUES (?, ?)", (customer.name, customer.phone))
+    conn.commit()
+    new_id = cursor.lastrowid
+    conn.close()
+    return new_id
+
+def rent_car(customer_id: int, car_id: str, days: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Mashina bo'shmi?
+    car = cursor.execute("SELECT * FROM cars WHERE car_id = ? AND is_rented = 0", (car_id,)).fetchone()
     if not car:
-        return {"success": False, "message": "Bunday raqamli mashina topilmadi."}
-    if not customer:
-        return {"success": False, "message": "Bunday ID li mijoz topilmadi."}
-    if car.is_rented:
-        return {"success": False, "message": "Kechirasiz, bu mashina hozirda band."}
+        conn.close()
+        return {"error": "Mashina band yoki mavjud emas"}
+    
+    # Mijoz bormi?
+    cust = cursor.execute("SELECT * FROM customers WHERE customer_id = ?", (customer_id,)).fetchone()
+    if not cust:
+        conn.close()
+        return {"error": "Mijoz topilmadi. Avval mijozni ro'yxatdan o'tkazing."}
 
-    car.is_rented = True
-    customer.rented_cars.append(car)
-    total_price = car.price_per_day * days
+    # Ijaraga berish
+    cursor.execute("UPDATE cars SET is_rented = 1 WHERE car_id = ?", (car_id,))
+    cursor.execute("UPDATE customers SET rented_car_id = ? WHERE customer_id = ?", (car_id, customer_id))
+    
+    total_price = car['price_per_day'] * days
+    conn.commit()
+    conn.close()
     
     return {
-        "success": True, 
-        "message": f"Muaffaqiyatli! Jami to'lov: {total_price:,.0f} so'm.",
-        "total_price": total_price
+        "message": f"{car['make']} {car['model']} ijaraga berildi!",
+        "total_price": total_price,
+        "customer": cust['name']
     }
 
-def return_car(customer_id: int, car_id: str) -> Dict[str, Any]:
-    car = next((c for c in cars_db if c.car_id == car_id), None)
-    customer = next((c for c in customers_db if c.customer_id == customer_id), None)
-
-    if not car or not customer:
-        return {"success": False, "message": "Mashina yoki Mijoz topilmadi."}
-
-    rented_car = next((c for c in customer.rented_cars if c.car_id == car_id), None)
-    if rented_car:
-        car.is_rented = False
-        # Mijozning mashinalari ro'yxatidan o'chiramiz
-        customer.rented_cars = [c for c in customer.rented_cars if c.car_id != car_id]
-        return {"success": True, "message": "Mashina muvaffaqiyatli qaytarildi. Rahmat!"}
+def return_car(customer_id: int, car_id: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
     
-    return {"success": False, "message": "Bu mijoz ushbu mashinani ijaraga olmagan."}
+    # Tekshirish
+    res = cursor.execute("SELECT * FROM customers WHERE customer_id = ? AND rented_car_id = ?", (customer_id, car_id)).fetchone()
+    if not res:
+        conn.close()
+        return {"error": "Bunday ijara topilmadi"}
+    
+    # Qaytarish
+    cursor.execute("UPDATE cars SET is_rented = 0 WHERE car_id = ?", (car_id,))
+    cursor.execute("UPDATE customers SET rented_car_id = NULL WHERE customer_id = ?", (customer_id,))
+    
+    conn.commit()
+    conn.close()
+    return {"message": "Mashina muvaffaqiyatli qaytarildi!"}

@@ -15,28 +15,61 @@
         </header>
 
         <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('cars')">Bo'sh Avtomobillar</button>
-            <button class="tab-btn" onclick="showTab('customers')">Mijozlar</button>
+            <button class="tab-btn active" onclick="showTab('cars')">Bo'sh Mashinalar</button>
+            <button class="tab-btn" onclick="showTab('rented')">Ijaradagi Mashinalar</button>
+            <button class="tab-btn" onclick="showTab('customers')">Aktiv Mijozlar</button>
+            <button class="tab-btn" onclick="showTab('admin')">Boshqaruv</button>
             <button class="tab-btn" onclick="showTab('rent')">Ijaraga Olish</button>
             <button class="tab-btn" onclick="showTab('return')">Qaytarish</button>
         </div>
 
         <div class="tab-content active" id="cars">
-            <h2>Hozirda bo'sh avtomobillar</h2>
+            <h2>Mavjud avtomobillar</h2>
             <div id="cars-list" class="grid-list">Yuklanmoqda...</div>
         </div>
 
+        <div class="tab-content" id="rented">
+            <h2>Hozirda ijarada bo'lgan avtomobillar</h2>
+            <div id="rented-cars-list" class="grid-list">Yuklanmoqda...</div>
+        </div>
+
         <div class="tab-content" id="customers">
-            <h2>Mijozlarimiz</h2>
+            <h2>Aktiv ijarachilar</h2>
             <div id="customers-list" class="grid-list">Yuklanmoqda...</div>
+        </div>
+
+        <div class="tab-content" id="admin">
+            <h2>Yangi Ma'lumotlar Qo'shish</h2>
+            <div class="admin-grid">
+                <form id="car-form" class="admin-form">
+                    <h3>Yangi Mashina</h3>
+                    <input type="text" id="new-car-id" placeholder="Mashina Raqami (masalan, 01A777AA)" required>
+                    <input type="text" id="new-car-make" placeholder="Markasi (Chevrolet)" required>
+                    <input type="text" id="new-car-model" placeholder="Modeli (Gentra)" required>
+                    <input type="number" id="new-car-year" placeholder="Yili" required>
+                    <input type="number" id="new-car-price" placeholder="Kunlik narxi" required>
+                    <input type="file" id="new-car-image" accept="image/*" class="select-input">
+                    <button type="submit" class="action-btn">Mashinani Qo'shish</button>
+                </form>
+                <form id="customer-form" class="admin-form">
+                    <h3>Yangi Mijoz</h3>
+                    <input type="text" id="new-cust-name" placeholder="F.I.SH" required>
+                    <input type="text" id="new-cust-phone" placeholder="Telefon raqami" required>
+                    <button type="submit" class="action-btn">Mijozni Ro'yxatdan O'tkazish</button>
+                </form>
+            </div>
         </div>
 
         <div class="tab-content" id="rent">
             <h2>Mashinani ijaraga olish</h2>
             <form id="rent-form">
-                <input type="number" id="rent-customer-id" placeholder="Mijoz ID si (masalan 1, 2, 3)" required>
-                <input type="text" id="rent-car-id" placeholder="Avtomobil Raqami (ID)" required>
-                <input type="number" id="rent-days" placeholder="Ijara kunlari (masalan 5)" required min="1">
+                <select id="rent-customer-id" class="select-input" required>
+                    <option value="">-- Mijozni tanlang --</option>
+                </select>
+                <select id="rent-car-id" class="select-input" required>
+                    <option value="">-- Mashinani tanlang --</option>
+                </select>
+                <input type="number" id="rent-days" placeholder="Ijara kunlari" required min="1">
                 <button type="submit" class="action-btn">Ijaraga Olish</button>
             </form>
             <p id="rent-message" class="message"></p>
@@ -45,7 +78,9 @@
         <div class="tab-content" id="return">
             <h2>Mashinani qaytarish</h2>
             <form id="return-form">
-                <input type="number" id="return-customer-id" placeholder="Mijoz ID si" required>
+                <select id="return-customer-id" class="select-input" required>
+                    <option value="">-- Mijozni tanlang --</option>
+                </select>
                 <input type="text" id="return-car-id" placeholder="Avtomobil Raqami (ID)" required>
                 <button type="submit" class="action-btn">Qaytarish</button>
             </form>
