@@ -16,7 +16,9 @@ from .system import (
     return_car,
     add_car,
     delete_car,
-    add_customer
+    add_customer,
+    get_earnings_report,
+    get_rental_history
 )
 
 # .env faylini dasturga yuklash (o'qish)
@@ -99,3 +101,11 @@ def rent(request: RentRequest):
 @app.post("/api/return")
 def return_c(request: ReturnRequest):
     return return_car(request.customer_id, request.car_id)
+
+@app.get("/api/reports/earnings")
+def get_earnings():
+    return get_earnings_report()
+
+@app.get("/api/reports/history")
+def get_history():
+    return get_rental_history()

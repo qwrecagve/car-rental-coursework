@@ -11,8 +11,39 @@ function showTab(tabName) {
     if (tabName === 'cars') loadCars();
     if (tabName === 'rented') loadRentedCars();
     if (tabName === 'customers') loadCustomers();
+    if (tabName === 'reports') loadReports();
     if (tabName === 'rent') loadRentData();
     if (tabName === 'return') loadActiveCustomersForReturn();
+}
+
+// Hisobotlarni yuklash
+async function loadReports() {
+    try {
+        const resEarnings = await fetch(`${API_URL}/reports/earnings`);
+        const earnings = await resEarnings.json();
+        
+        document.getElementById('month-earnings').innerText = earnings.month_total.toLocaleString() + " so'm";
+        document.getElementById('year-earnings').innerText = earnings.year_total.toLocaleString() + " so'm";
+        document.getElementById('total-rentals-count').innerText = earnings.total_rentals + " ta";
+
+        // Tarixni yuklash
+        const resHistory = await fetch(`${API_URL}/reports/history`);
+        const history = await resHistory.json();
+        const tbody = document.getElementById('history-body');
+        
+        tbody.innerHTML = history.map(h => `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 10px;">${h.make} ${h.model}</td>
+                <td style="padding: 10px;">${h.customer_name}</td>
+                <td style="padding: 10px;">${h.rental_date}</td>
+                <td style="padding: 10px;">${h.days} kun</td>
+                <td style="padding: 10px;">${h.total_price.toLocaleString()} so'm</td>
+            </tr>
+        `).join('');
+
+    } catch (e) {
+        console.error("Hisobot yuklashda xatolik:", e);
+    }
 }
 
 // Ijaradagi mashinalarni yuklash
@@ -33,6 +64,9 @@ async function loadRentedCars() {
                 <div class="card-info">
                     <h3>${c.make} ${c.model}</h3>
                     <p><strong>Raqam:</strong> ${c.car_id}</p>
+                    <p><strong>Ijara sanasi:</strong> ${c.rental_date}</p>
+                    <p><strong>Muddati:</strong> ${c.days} kun</p>
+                    <p><strong>Umumiy:</strong> ${c.total_price.toLocaleString()} so'm</p>
                     <p class="status-badge">IJARA</p>
                 </div>
             </div>

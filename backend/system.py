@@ -1,5 +1,6 @@
 import sqlite3
 import os
+from datetime import datetime
 from typing import List, Optional
 from .models import Car, Customer, CarCreate, CustomerCreate
 
@@ -37,6 +38,18 @@ def init_db():
             FOREIGN KEY (rented_car_id) REFERENCES cars (car_id)
         )
     ''')
+
+    # Ijaralar tarixi (Hisobot uchun)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS rentals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            car_id TEXT,
+            customer_id INTEGER,
+            rental_date TEXT,
+            days INTEGER,
+            total_price REAL
+        )
+    ''')
     
     # Agar baza bo'sh bo'lsa, boshlang'ich mashinalarni qo'shish
     cursor.execute("SELECT COUNT(*) FROM cars")
@@ -68,11 +81,20 @@ def get_available_cars() -> List[Car]:
     conn.close()
     return [Car(**dict(row)) for row in rows]
 
-def get_rented_cars() -> List[Car]:
+def get_rented_cars():
     conn = get_db_connection()
-    rows = conn.execute("SELECT * FROM cars WHERE is_rented = 1").fetchall()
+    # Mashinalarni ularning eng oxirgi ijara ma'lumotlari bilan birga olish
+    query = """
+        SELECT c.*, r.rental_date, r.days, r.total_price 
+        FROM cars c
+        JOIN rentals r ON c.car_id = r.car_id
+        WHERE c.is_rented = 1
+        GROUP BY c.car_id
+        HAVING r.id = MAX(r.id)
+    """
+    rows = conn.execute(query).fetchall()
     conn.close()
-    return [Car(**dict(row)) for row in rows]
+    return [dict(row) for row in rows]
 
 def get_active_customers() -> List[Customer]:
     conn = get_db_connection()
@@ -140,6 +162,12 @@ def rent_car(customer_id: int, car_id: str, days: int):
     cursor.execute("UPDATE customers SET rented_car_id = ? WHERE customer_id = ?", (car_id, customer_id))
     
     total_price = car['price_per_day'] * days
+    
+    # Tarixga yozish
+    today = datetime.now().strftime("%Y-%m-%d")
+    cursor.execute("INSERT INTO rentals (car_id, customer_id, rental_date, days, total_price) VALUES (?, ?, ?, ?, ?)",
+                   (car_id, customer_id, today, days, total_price))
+    
     conn.commit()
     conn.close()
     
@@ -148,6 +176,45 @@ def rent_car(customer_id: int, car_id: str, days: int):
         "total_price": total_price,
         "customer": cust['name']
     }
+
+def get_earnings_report():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Bugungi sana
+    now = datetime.now()
+    current_month = now.strftime("%Y-%m")
+    current_year = now.strftime("%Y")
+    
+    # 1 oylik tushum
+    month_total = cursor.execute("SELECT SUM(total_price) FROM rentals WHERE rental_date LIKE ?", (f"{current_month}%",)).fetchone()[0] or 0
+    
+    # 1 yillik tushum
+    year_total = cursor.execute("SELECT SUM(total_price) FROM rentals WHERE rental_date LIKE ?", (f"{current_year}%",)).fetchone()[0] or 0
+    
+    # Jami ijaralar soni
+    total_rentals = cursor.execute("SELECT COUNT(*) FROM rentals").fetchone()[0]
+    
+    conn.close()
+    
+    return {
+        "month_total": month_total,
+        "year_total": year_total,
+        "total_rentals": total_rentals
+    }
+
+def get_rental_history():
+    conn = get_db_connection()
+    query = """
+        SELECT r.*, c.make, c.model, cust.name as customer_name 
+        FROM rentals r
+        JOIN cars c ON r.car_id = c.car_id
+        JOIN customers cust ON r.customer_id = cust.customer_id
+        ORDER BY r.id DESC
+    """
+    rows = conn.execute(query).fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
 
 def return_car(customer_id: int, car_id: str):
     conn = get_db_connection()

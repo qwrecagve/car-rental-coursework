@@ -18,6 +18,7 @@
             <button class="tab-btn active" onclick="showTab('cars')">Bo'sh Mashinalar</button>
             <button class="tab-btn" onclick="showTab('rented')">Ijaradagi Mashinalar</button>
             <button class="tab-btn" onclick="showTab('customers')">Aktiv Mijozlar</button>
+            <button class="tab-btn" onclick="showTab('reports')">Hisobotlar</button>
             <button class="tab-btn" onclick="showTab('admin')">Boshqaruv</button>
             <button class="tab-btn" onclick="showTab('rent')">Ijaraga Olish</button>
             <button class="tab-btn" onclick="showTab('return')">Qaytarish</button>
@@ -36,6 +37,44 @@
         <div class="tab-content" id="customers">
             <h2>Aktiv ijarachilar</h2>
             <div id="customers-list" class="grid-list">Yuklanmoqda...</div>
+        </div>
+
+        <div class="tab-content" id="reports">
+            <h2>Moliyaviy Hisobotlar</h2>
+            <div class="reports-grid">
+                <div class="report-card">
+                    <h3>1 Oylik Tushum</h3>
+                    <p id="month-earnings">0 so'm</p>
+                </div>
+                <div class="report-card">
+                    <h3>1 Yillik Tushum</h3>
+                    <p id="year-earnings">0 so'm</p>
+                </div>
+                <div class="report-card">
+                    <h3>Jami Ijaralar</h3>
+                    <p id="total-rentals-count">0 ta</p>
+                </div>
+            </div>
+
+            <div class="history-section" style="margin-top: 40px;">
+                <h3 style="color: #fce38a; margin-bottom: 15px;">Batafsil Ijara Tarixi</h3>
+                <div class="table-container" style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 15px; overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; color: white;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.2); text-align: left;">
+                                <th style="padding: 10px;">Mashina</th>
+                                <th style="padding: 10px;">Mijoz</th>
+                                <th style="padding: 10px;">Sana</th>
+                                <th style="padding: 10px;">Kun</th>
+                                <th style="padding: 10px;">Summa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body">
+                            <!-- Tarix yuklanadi -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <div class="tab-content" id="admin">
