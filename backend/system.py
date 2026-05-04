@@ -11,11 +11,29 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 def get_db_connection():
     if ENVIRONMENT == "production" and AZURE_CONN:
-        return pyodbc.connect(AZURE_CONN)
+        # pyodbc Encrypt=True o'rniga Encrypt=yes talab qiladi
+        conn_str = AZURE_CONN
+        conn_str = conn_str.replace("Encrypt=True", "Encrypt=yes")
+        conn_str = conn_str.replace("Encrypt=False", "Encrypt=no")
+        conn_str = conn_str.replace("TrustServerCertificate=False", "TrustServerCertificate=no")
+        conn_str = conn_str.replace("TrustServerCertificate=True", "TrustServerCertificate=yes")
+        # "Initial Catalog" ni "Database" ga o'zgartirish
+        conn_str = conn_str.replace("Initial Catalog=", "Database=")
+        # "User ID=" ni "Uid=" ga
+        conn_str = conn_str.replace("User ID=", "Uid=")
+        # "Password=" ni "Pwd=" ga
+        conn_str = conn_str.replace("Password=", "Pwd=")
+        # MultipleActiveResultSets parametri pyodbc da yo'q, olib tashlaymiz
+        import re
+        conn_str = re.sub(r'MultipleActiveResultSets=[^;]+;?', '', conn_str)
+        conn_str = re.sub(r'Persist Security Info=[^;]+;?', '', conn_str)
+        conn_str = re.sub(r'Connection Timeout=\d+;?', '', conn_str)
+        return pyodbc.connect(conn_str)
     
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
 
 def rows_to_dicts(cursor, rows):
     """pyodbc va sqlite uchun universial row->dict konvertori"""
