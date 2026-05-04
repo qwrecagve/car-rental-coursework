@@ -11,20 +11,22 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 def get_db_connection():
     if ENVIRONMENT == "production" and AZURE_CONN:
-        # Linux pyodbc Encrypt=True o'rniga Encrypt=yes so'raydi
-        # Yoki agar xato bersa, uni butunlay olib tashlaymiz
-        safe_conn = AZURE_CONN.replace("Encrypt=True", "Encrypt=yes").replace("TrustServerCertificate=False", "TrustServerCertificate=no")
-        safe_conn = safe_conn.replace("Encrypt=true", "Encrypt=yes").replace("Encrypt=1", "Encrypt=yes")
-        try:
-            return pyodbc.connect(safe_conn)
-        except:
-            # Agar yana xato bersa, Encrypt ni olib tashlab ulanib ko'ramiz
-            parts = [p for p in safe_conn.split(';') if not p.lower().startswith('encrypt')]
-            return pyodbc.connect(';'.join(parts))
+        return pyodbc.connect(AZURE_CONN)
     
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+def rows_to_dicts(cursor, rows):
+    """pyodbc va sqlite uchun universial row->dict konvertori"""
+    columns = [col[0] for col in cursor.description]
+    return [dict(zip(columns, row)) for row in rows]
+
+def fetchone_to_dict(cursor, row):
+    if row is None:
+        return None
+    columns = [col[0] for col in cursor.description]
+    return dict(zip(columns, row))
 
 db_init_error = None
 
@@ -126,43 +128,50 @@ init_db()
 
 def get_all_cars() -> List[Car]:
     conn = get_db_connection()
-    rows = conn.execute("SELECT * FROM cars").fetchall()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM cars")
+    rows = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
-    return [Car(**dict(row)) for row in rows]
+    return [Car(**row) for row in rows]
 
 def get_available_cars() -> List[Car]:
     conn = get_db_connection()
-    rows = conn.execute("SELECT * FROM cars WHERE is_rented = 0").fetchall()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM cars WHERE is_rented = 0")
+    rows = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
-    return [Car(**dict(row)) for row in rows]
+    return [Car(**row) for row in rows]
 
 def get_rented_cars():
     conn = get_db_connection()
-    # Mashinalarni ularning eng oxirgi ijara ma'lumotlari bilan birga olish
+    cursor = conn.cursor()
     query = """
-        SELECT c.*, r.rental_date, r.days, r.total_price 
+        SELECT c.car_id, c.make, c.model, c.year, c.price_per_day, c.image_url, c.is_rented,
+               r.rental_date, r.days, r.total_price 
         FROM cars c
         JOIN rentals r ON c.car_id = r.car_id
         WHERE c.is_rented = 1
-        GROUP BY c.car_id
-        HAVING r.id = MAX(r.id)
     """
-    rows = conn.execute(query).fetchall()
+    cursor.execute(query)
+    rows = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
-    return [dict(row) for row in rows]
+    return rows
 
 def get_active_customers() -> List[Customer]:
     conn = get_db_connection()
-    # Faqat mashina olgan mijozlarni ko'rsatish
-    rows = conn.execute("SELECT * FROM customers WHERE rented_car_id IS NOT NULL").fetchall()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM customers WHERE rented_car_id IS NOT NULL")
+    rows = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
-    return [Customer(**dict(row)) for row in rows]
+    return [Customer(**row) for row in rows]
 
 def get_all_registered_customers() -> List[Customer]:
     conn = get_db_connection()
-    rows = conn.execute("SELECT * FROM customers").fetchall()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM customers")
+    rows = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
-    return [Customer(**dict(row)) for row in rows]
+    return [Customer(**row) for row in rows]
 
 def add_car(car: CarCreate):
     conn = get_db_connection()
@@ -201,13 +210,15 @@ def rent_car(customer_id: int, car_id: str, days: int):
     cursor = conn.cursor()
     
     # Mashina bo'shmi?
-    car = cursor.execute("SELECT * FROM cars WHERE car_id = ? AND is_rented = 0", (car_id,)).fetchone()
+    cursor.execute("SELECT * FROM cars WHERE car_id = ? AND is_rented = 0", (car_id,))
+    car = fetchone_to_dict(cursor, cursor.fetchone())
     if not car:
         conn.close()
         return {"error": "Mashina band yoki mavjud emas"}
     
     # Mijoz bormi?
-    cust = cursor.execute("SELECT * FROM customers WHERE customer_id = ?", (customer_id,)).fetchone()
+    cursor.execute("SELECT * FROM customers WHERE customer_id = ?", (customer_id,))
+    cust = fetchone_to_dict(cursor, cursor.fetchone())
     if not cust:
         conn.close()
         return {"error": "Mijoz topilmadi. Avval mijozni ro'yxatdan o'tkazing."}
@@ -260,23 +271,27 @@ def get_earnings_report():
 
 def get_rental_history():
     conn = get_db_connection()
+    cursor = conn.cursor()
     query = """
-        SELECT r.*, c.make, c.model, cust.name as customer_name 
+        SELECT r.id, r.car_id, r.customer_id, r.rental_date, r.days, r.total_price,
+               c.make, c.model, cust.name as customer_name 
         FROM rentals r
         JOIN cars c ON r.car_id = c.car_id
         JOIN customers cust ON r.customer_id = cust.customer_id
         ORDER BY r.id DESC
     """
-    rows = conn.execute(query).fetchall()
+    cursor.execute(query)
+    rows = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
-    return [dict(row) for row in rows]
+    return rows
 
 def return_car(customer_id: int, car_id: str):
     conn = get_db_connection()
     cursor = conn.cursor()
     
     # Tekshirish
-    res = cursor.execute("SELECT * FROM customers WHERE customer_id = ? AND rented_car_id = ?", (customer_id, car_id)).fetchone()
+    cursor.execute("SELECT * FROM customers WHERE customer_id = ? AND rented_car_id = ?", (customer_id, car_id))
+    res = cursor.fetchone()
     if not res:
         conn.close()
         return {"error": "Bunday ijara topilmadi"}
