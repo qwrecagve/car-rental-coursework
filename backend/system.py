@@ -11,7 +11,16 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 def get_db_connection():
     if ENVIRONMENT == "production" and AZURE_CONN:
-        return pyodbc.connect(AZURE_CONN)
+        # Linux pyodbc Encrypt=True o'rniga Encrypt=yes so'raydi
+        # Yoki agar xato bersa, uni butunlay olib tashlaymiz
+        safe_conn = AZURE_CONN.replace("Encrypt=True", "Encrypt=yes").replace("TrustServerCertificate=False", "TrustServerCertificate=no")
+        safe_conn = safe_conn.replace("Encrypt=true", "Encrypt=yes").replace("Encrypt=1", "Encrypt=yes")
+        try:
+            return pyodbc.connect(safe_conn)
+        except:
+            # Agar yana xato bersa, Encrypt ni olib tashlab ulanib ko'ramiz
+            parts = [p for p in safe_conn.split(';') if not p.lower().startswith('encrypt')]
+            return pyodbc.connect(';'.join(parts))
     
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
