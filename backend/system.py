@@ -17,93 +17,100 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-def init_db():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Azure SQL va SQLite farqini hisobga olamiz
-    is_azure = (ENVIRONMENT == "production")
-    
-    # Mashinalar jadvali
-    cursor.execute(f'''
-        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'cars')
-        CREATE TABLE cars (
-            car_id NVARCHAR(50) PRIMARY KEY,
-            make NVARCHAR(100),
-            model NVARCHAR(100),
-            year INT,
-            price_per_day FLOAT,
-            image_url NVARCHAR(MAX),
-            is_rented INT DEFAULT 0
-        )
-    ''' if is_azure else '''
-        CREATE TABLE IF NOT EXISTS cars (
-            car_id TEXT PRIMARY KEY,
-            make TEXT,
-            model TEXT,
-            year INTEGER,
-            price_per_day REAL,
-            image_url TEXT,
-            is_rented INTEGER DEFAULT 0
-        )
-    ''')
-    
-    # Mijozlar jadvali
-    cursor.execute(f'''
-        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'customers')
-        CREATE TABLE customers (
-            customer_id INT PRIMARY KEY IDENTITY(1,1),
-            name NVARCHAR(200),
-            phone NVARCHAR(50),
-            rented_car_id NVARCHAR(50),
-            FOREIGN KEY (rented_car_id) REFERENCES cars (car_id)
-        )
-    ''' if is_azure else '''
-        CREATE TABLE IF NOT EXISTS customers (
-            customer_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            phone TEXT,
-            rented_car_id TEXT,
-            FOREIGN KEY (rented_car_id) REFERENCES cars (car_id)
-        )
-    ''')
+db_init_error = None
 
-    # Ijaralar tarixi
-    cursor.execute(f'''
-        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'rentals')
-        CREATE TABLE rentals (
-            id INT PRIMARY KEY IDENTITY(1,1),
-            car_id NVARCHAR(50),
-            customer_id INT,
-            rental_date NVARCHAR(50),
-            days INT,
-            total_price FLOAT
-        )
-    ''' if is_azure else '''
-        CREATE TABLE IF NOT EXISTS rentals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            car_id TEXT,
-            customer_id INTEGER,
-            rental_date TEXT,
-            days INTEGER,
-            total_price REAL
-        )
-    ''')
-    
-    # Boshlang'ich ma'lumotlar (agar bo'sh bo'lsa)
-    check_query = "SELECT COUNT(*) FROM cars" if is_azure else "SELECT COUNT(*) FROM cars"
-    cursor.execute(check_query)
-    if cursor.fetchone()[0] == 0:
-        initial_cars = [
-            ('01A123AA', 'Chevrolet', 'Malibu', 2023, 500000.0, 'images/malibu-uz.jpg'),
-            ('01B456BB', 'Chevrolet', 'Gentra', 2022, 300000.0, 'images/gentra.jpg'),
-            ('01C789CC', 'Chevrolet', 'Cobalt', 2021, 250000.0, 'images/cobalt.jpg')
-        ]
-        for car in initial_cars:
-            cursor.execute("INSERT INTO cars (car_id, make, model, year, price_per_day, image_url) VALUES (?, ?, ?, ?, ?, ?)", car)
-    
-    conn.commit()
-    conn.close()
+def init_db():
+    global db_init_error
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Azure SQL va SQLite farqini hisobga olamiz
+        is_azure = (ENVIRONMENT == "production")
+        
+        # Mashinalar jadvali
+        cursor.execute(f'''
+            IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'cars')
+            CREATE TABLE cars (
+                car_id NVARCHAR(50) PRIMARY KEY,
+                make NVARCHAR(100),
+                model NVARCHAR(100),
+                year INT,
+                price_per_day FLOAT,
+                image_url NVARCHAR(MAX),
+                is_rented INT DEFAULT 0
+            )
+        ''' if is_azure else '''
+            CREATE TABLE IF NOT EXISTS cars (
+                car_id TEXT PRIMARY KEY,
+                make TEXT,
+                model TEXT,
+                year INTEGER,
+                price_per_day REAL,
+                image_url TEXT,
+                is_rented INTEGER DEFAULT 0
+            )
+        ''')
+        
+        # Mijozlar jadvali
+        cursor.execute(f'''
+            IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'customers')
+            CREATE TABLE customers (
+                customer_id INT PRIMARY KEY IDENTITY(1,1),
+                name NVARCHAR(200),
+                phone NVARCHAR(50),
+                rented_car_id NVARCHAR(50),
+                FOREIGN KEY (rented_car_id) REFERENCES cars (car_id)
+            )
+        ''' if is_azure else '''
+            CREATE TABLE IF NOT EXISTS customers (
+                customer_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT,
+                phone TEXT,
+                rented_car_id TEXT,
+                FOREIGN KEY (rented_car_id) REFERENCES cars (car_id)
+            )
+        ''')
+
+        # Ijaralar tarixi
+        cursor.execute(f'''
+            IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'rentals')
+            CREATE TABLE rentals (
+                id INT PRIMARY KEY IDENTITY(1,1),
+                car_id NVARCHAR(50),
+                customer_id INT,
+                rental_date NVARCHAR(50),
+                days INT,
+                total_price FLOAT
+            )
+        ''' if is_azure else '''
+            CREATE TABLE IF NOT EXISTS rentals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                car_id TEXT,
+                customer_id INTEGER,
+                rental_date TEXT,
+                days INTEGER,
+                total_price REAL
+            )
+        ''')
+        
+        # Boshlang'ich ma'lumotlar (agar bo'sh bo'lsa)
+        check_query = "SELECT COUNT(*) FROM cars" if is_azure else "SELECT COUNT(*) FROM cars"
+        cursor.execute(check_query)
+        if cursor.fetchone()[0] == 0:
+            initial_cars = [
+                ('01A123AA', 'Chevrolet', 'Malibu', 2023, 500000.0, 'images/malibu-uz.jpg'),
+                ('01B456BB', 'Chevrolet', 'Gentra', 2022, 300000.0, 'images/gentra.jpg'),
+                ('01C789CC', 'Chevrolet', 'Cobalt', 2021, 250000.0, 'images/cobalt.jpg')
+            ]
+            for car in initial_cars:
+                cursor.execute("INSERT INTO cars (car_id, make, model, year, price_per_day, image_url) VALUES (?, ?, ?, ?, ?, ?)", car)
+        
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        db_init_error = str(e)
+        print("DATABASE INIT ERROR:", e)
 
 # Bazani ishga tushirish
 init_db()
