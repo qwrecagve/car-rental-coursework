@@ -111,3 +111,8 @@ def get_earnings():
 @app.get("/api/reports/history")
 def get_history():
     return get_rental_history()
+
+# Frontend qismini ulash (BARCHA API ROUTELARDAN KEYIN BO'LISHI SHART)
+FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
+app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+
