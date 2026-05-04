@@ -112,6 +112,19 @@ def get_earnings():
 def get_history():
     return get_rental_history()
 
+@app.get("/api/debug")
+def debug_info():
+    from .system import db_init_error
+    return {
+        "db_init_error": db_init_error,
+        "frontend_dir": FRONTEND_DIR,
+        "frontend_exists": os.path.exists(FRONTEND_DIR),
+        "index_html_exists": os.path.exists(os.path.join(FRONTEND_DIR, "index.html")),
+        "cwd": os.getcwd(),
+        "env_production": ENVIRONMENT == "production"
+    }
+
+
 # Frontend qismini ulash (BARCHA API ROUTELARDAN KEYIN BO'LISHI SHART)
 FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
 app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
