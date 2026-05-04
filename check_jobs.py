@@ -12,10 +12,9 @@ try:
     jobs_data = json.loads(req_jobs.read())
     
     for job in jobs_data['jobs']:
-        if job['conclusion'] == 'failure':
-            print(f"Failed Job: {job['name']}")
-            for step in job['steps']:
-                if step['conclusion'] == 'failure':
-                    print(f"Failed Step: {step['name']}")
+        print(f"Job: {job['name']} - {job['conclusion']}")
+        for step in job['steps']:
+            if step['conclusion'] == 'failure':
+                print(f"  Failed Step: {step['name']}")
 except Exception as e:
     print("Error:", e)
