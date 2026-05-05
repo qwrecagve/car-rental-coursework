@@ -114,29 +114,27 @@ def get_history():
 
 @app.get("/api/debug")
 def debug_info():
-    from .system import db_init_error, get_db_connection
+    from .system import db_init_error, get_available_cars
+    import traceback
     cars_error = None
-    cars_data = None
+    cars_count = None
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM cars")
-        columns = [col[0] for col in cursor.description]
-        rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
-        conn.close()
-        cars_data = rows
-    except Exception as e:
-        cars_error = str(e)
+        cars = get_available_cars()
+        cars_count = len(cars)
+    except Exception:
+        cars_error = traceback.format_exc()
+        
     return {
         "db_init_error": db_init_error,
-        "cars_error": cars_error,
-        "cars_count": len(cars_data) if cars_data is not None else None,
+        "get_available_cars_error": cars_error,
+        "cars_count": cars_count,
         "frontend_dir": FRONTEND_DIR,
         "frontend_exists": os.path.exists(FRONTEND_DIR),
         "index_html_exists": os.path.exists(os.path.join(FRONTEND_DIR, "index.html")),
         "cwd": os.getcwd(),
         "env_production": ENVIRONMENT == "production"
     }
+
 
 
 
