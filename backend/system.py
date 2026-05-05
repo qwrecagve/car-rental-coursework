@@ -56,18 +56,6 @@ def init_db():
         
         # Azure SQL va SQLite farqini hisobga olamiz
         is_azure = (ENVIRONMENT == "production")
-
-        if is_azure:
-            # Sxemani tekshirish: agar car_id ustuni bo'lmasa, demak jadval eski, o'chirib qayta yaratamiz
-            try:
-                cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'cars' AND COLUMN_NAME = 'car_id'")
-                if not cursor.fetchone():
-                    cursor.execute("DROP TABLE IF EXISTS rentals")
-                    cursor.execute("DROP TABLE IF EXISTS customers")
-                    cursor.execute("DROP TABLE IF EXISTS cars")
-                    conn.commit()
-            except:
-                pass
         
         # Mashinalar jadvali
 
@@ -149,12 +137,17 @@ def init_db():
         cursor.execute(check_query)
         if cursor.fetchone()[0] == 0:
             initial_cars = [
-                ('01A123AA', 'Chevrolet', 'Malibu', 2023, 500000.0, 'images/malibu-uz.jpg'),
-                ('01B456BB', 'Chevrolet', 'Gentra', 2022, 300000.0, 'images/gentra.jpg'),
-                ('01C789CC', 'Chevrolet', 'Cobalt', 2021, 250000.0, 'images/cobalt.jpg')
+                ('01A123AA', 'Chevrolet', 'Malibu', 2023, 500000.0, 'https://autostrada.uz/wp-content/uploads/2021/09/malibu-turbo.jpg'),
+                ('01B456BB', 'Chevrolet', 'Gentra', 2022, 350000.0, 'https://m.procars.uz/uploads/car_info/images/2023-01/167411317063c8ed9257e87.jpg'),
+                ('01C789CC', 'Chevrolet', 'Cobalt', 2021, 300000.0, 'https://m.procars.uz/uploads/car_info/images/2023-01/167411267463c8eb226c63c.jpg')
             ]
             for car in initial_cars:
                 cursor.execute("INSERT INTO cars (car_id, make, model, year, price_per_day, image_url) VALUES (?, ?, ?, ?, ?, ?)", car)
+        else:
+            # Mavjud 3 ta mashinaning rasmlarini yangilash (bir marta)
+            cursor.execute("UPDATE cars SET image_url = 'https://autostrada.uz/wp-content/uploads/2021/09/malibu-turbo.jpg' WHERE car_id = '01A123AA'")
+            cursor.execute("UPDATE cars SET image_url = 'https://m.procars.uz/uploads/car_info/images/2023-01/167411317063c8ed9257e87.jpg' WHERE car_id = '01B456BB'")
+            cursor.execute("UPDATE cars SET image_url = 'https://m.procars.uz/uploads/car_info/images/2023-01/167411267463c8eb226c63c.jpg' WHERE car_id = '01C789CC'")
         
         conn.commit()
         conn.close()
