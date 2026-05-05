@@ -64,10 +64,11 @@ def get_all_cust():
 
 @app.post("/api/cars")
 def create_car(car: CarCreate):
-    success = add_car(car)
-    if success:
+    result = add_car(car)
+    if isinstance(result, dict) and result.get("success"):
         return {"message": "Mashina muvaffaqiyatli qo'shildi"}
-    return {"error": "Xatolik! Raqam band bo'lishi mumkin."}
+    error_msg = result.get("error") if isinstance(result, dict) else "Noma'lum xatolik"
+    return {"error": f"Xatolik: {error_msg}"}
 
 @app.delete("/api/cars/{car_id}")
 def remove_car(car_id: str):
@@ -114,13 +115,20 @@ def get_history():
 
 @app.get("/api/debug")
 def debug_info():
-    from .system import db_init_error, get_available_cars
+    from .system import db_init_error, get_available_cars, get_db_connection
     import traceback
     cars_error = None
     cars_count = None
+    schema = {}
     try:
         cars = get_available_cars()
         cars_count = len(cars)
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'cars'")
+        schema['cars'] = [list(row) for row in cursor.fetchall()]
+        conn.close()
     except Exception:
         cars_error = traceback.format_exc()
         
@@ -128,12 +136,14 @@ def debug_info():
         "db_init_error": db_init_error,
         "get_available_cars_error": cars_error,
         "cars_count": cars_count,
+        "schema": schema,
         "frontend_dir": FRONTEND_DIR,
         "frontend_exists": os.path.exists(FRONTEND_DIR),
         "index_html_exists": os.path.exists(os.path.join(FRONTEND_DIR, "index.html")),
         "cwd": os.getcwd(),
         "env_production": ENVIRONMENT == "production"
     }
+
 
 
 

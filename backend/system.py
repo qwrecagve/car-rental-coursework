@@ -205,11 +205,12 @@ def add_car(car: CarCreate):
         conn.execute("INSERT INTO cars (car_id, make, model, year, price_per_day, image_url) VALUES (?, ?, ?, ?, ?, ?)",
                      (car.car_id, car.make, car.model, car.year, car.price_per_day, car.image_url))
         conn.commit()
-        return True
-    except:
-        return False
+        return {"success": True}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
     finally:
         conn.close()
+
 
 def delete_car(car_id: str):
     conn = get_db_connection()
