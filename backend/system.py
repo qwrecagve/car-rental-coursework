@@ -69,6 +69,13 @@ def init_db():
                 image_url NVARCHAR(MAX),
                 is_rented INT DEFAULT 0
             )
+            ELSE
+            BEGIN
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('cars') AND name = 'is_rented')
+                BEGIN
+                    ALTER TABLE cars ADD is_rented INT DEFAULT 0;
+                END
+            END
         ''' if is_azure else '''
             CREATE TABLE IF NOT EXISTS cars (
                 car_id TEXT PRIMARY KEY,
@@ -80,6 +87,7 @@ def init_db():
                 is_rented INTEGER DEFAULT 0
             )
         ''')
+
         
         # Mijozlar jadvali
         cursor.execute(f'''
