@@ -56,8 +56,21 @@ def init_db():
         
         # Azure SQL va SQLite farqini hisobga olamiz
         is_azure = (ENVIRONMENT == "production")
+
+        if is_azure:
+            # Sxemani tekshirish: agar car_id ustuni bo'lmasa, demak jadval eski, o'chirib qayta yaratamiz
+            try:
+                cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'cars' AND COLUMN_NAME = 'car_id'")
+                if not cursor.fetchone():
+                    cursor.execute("DROP TABLE IF EXISTS rentals")
+                    cursor.execute("DROP TABLE IF EXISTS customers")
+                    cursor.execute("DROP TABLE IF EXISTS cars")
+                    conn.commit()
+            except:
+                pass
         
         # Mashinalar jadvali
+
         cursor.execute(f'''
             IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'cars')
             CREATE TABLE cars (
