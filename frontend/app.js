@@ -201,9 +201,11 @@ document.getElementById('car-form').addEventListener('submit', async (e) => {
     
     // Avval rasmni yuklaymiz
     const imageInput = document.getElementById('new-car-image');
-    let imageUrl = "images/default.png";
+    const imageUrlInput = document.getElementById('new-car-image-url');
+    let imageUrl = imageUrlInput.value || "https://via.placeholder.com/300x150?text=Rasm+Yuklanmagan";
 
-    if (imageInput.files.length > 0) {
+    // Agar link berilmagan bo'lsa va fayl tanlangan bo'lsa, faylni yuklaymiz
+    if (!imageUrlInput.value && imageInput.files.length > 0) {
         const formData = new FormData();
         formData.append("file", imageInput.files[0]);
         
